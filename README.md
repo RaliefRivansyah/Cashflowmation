@@ -109,11 +109,11 @@ Body Email:
 
 Data otomatis terpisah sesuai tipe transaksi (*Income* / *Expense*):
 
-![Income](component/image.png)
+![Income](Component/image.png)
 
 * **Income Sheet:** Mencatat tanggal, status, customer/sumber, deskripsi, nomor invoice, amount, dan email_id.
 
-![Expense](component/image-1.png)
+![Expense](Component/image-1.png)
 
 * **Expense Sheet:** Mencatat pengeluaran, supplier, deskripsi, amount, status (*paid/unpaid/rejected*), dan tanggal jatuh tempo (*due_date*).
 
@@ -121,7 +121,7 @@ Data otomatis terpisah sesuai tipe transaksi (*Income* / *Expense*):
 
 Bot Telegram akan mengirimkan rekap kas harian secara otomatis:
 
-![telegram](component/image-2.png)
+![telegram](Component/image-2.png)
 
 ---
 
