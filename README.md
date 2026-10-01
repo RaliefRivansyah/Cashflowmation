@@ -1,112 +1,116 @@
-# 🚀 AutoCashflow n8n: Automated Cashflow Tracking System for Solo Business Owners
+# Cashflowmation: Tracking Keuangan UMKM Otomatis
 
-![n8n](https://img.shields.io/badge/n8n-Workflow%20Automation-FF6D5A?style=for-the-badge&logo=n8n&logoColor=white)
-![GeminiAI](https://img.shields.io/badge/GeminiAI-GPT--4o--mini-10A37F?style=for-the-badge&logo=GeminiAI&logoColor=white)
-![Google Sheets](https://img.shields.io/badge/Google%20Sheets-Database-0F9D58?style=for-the-badge&logo=googlesheets&logoColor=white)
-![Telegram](https://img.shields.io/badge/Telegram-Bot%20Notifications-229ED9?style=for-the-badge&logo=telegram&logoColor=white)
+Sistem pemantau pendapatan dan pengeluaran otomatis berbasis email transaksi untuk efisiensi operasional *solo owner* UMKM.
 
-An automated cashflow management system built with **n8n** and **GeminiAI (LLM)** designed specifically for solo MSME (UMKM) owners. This workflow automatically extracts incoming income and expense data directly from transaction emails and logs them into a Google Sheet ledger while sending instant real-time alerts via Telegram.
+**Author:** Ralief Langga Rivansyah  
+**Engine:** n8n + AI LLM (Gemini)  
 
 ---
 
-## 📌 Problem Background
+## 📌 Latar Belakang & Masalah
 
-Solo business owners often struggle to keep track of daily income and expenses due to operational bandwidth limits:
-- ⏳ **Time-Consuming Manual Entry:** Copying invoice data, transfer receipts, and notes into spreadsheets takes hours away from business growth.
-- 📬 **Scattered Transaction Records:** E-invoices and payment confirmation emails pile up without centralized aggregation.
-- ⚠️ **Financial Risk & Leakage:** Delayed reporting leads to an unclear view of real-time balance positions.
+Banyak *owner* UMKM skala kecil mengelola seluruh operasional bisnis seorang diri (*solo owner*) tanpa bantuan admin keuangan. Hal ini sering memicu beberapa kendala:
+- **Pencatatan Manual & Terlewat:** Input invoice dan tagihan secara manual rentan lupa atau salah ketik.
+- **Risiko Cashflow:** Pembayaran tertunda atau tagihan tidak terdeteksi memicu kemacetan arus kas.
+- **Kurang Visibilitas Real-time:** Membutuhkan waktu lama hanya untuk rekap keuangan bulanan/harian.
 
-### 💡 The Solution
-**AutoCashflow n8n** automates **85% of administrative work** by capturing incoming transaction emails, utilizing AI to parse details into structured JSON, and updating financial ledgers instantly.
+### Solusi yang Ditawarkan
+- ⏱️ **Hemat Waktu:** Memangkas proses rekap manual satu per satu dari nota ke spreadsheet.
+- 📂 **Data Terorganisasi:** Transaksi dari email/nota diekstrak dan tersimpan rapi di Google Sheets.
+- ⚡ **Real-time & Akurat:** Status arus kas ter-update otomatis saat ada email masuk dan dikirimkan via notifikasi instan.
 
 ---
 
-## 🛠️ Tech Stack & Integration
+## 🚀 Workflow & Cara Kerja
 
-| Tool / Platform | Role in System |
+workflow berjalan secara otomatis dalam 4 tahap utama:
+
+[ Gmail Trigger ] ➡️ [ AI Extraction (Gemini) ] ➡️ [ Spreadsheet Sync ] ➡️ [ Telegram Alert ]
+
+
+1. **Gmail Trigger:** Mendeteksi email masuk secara periodik (*polling* 5 menit sekali) dengan filter kata kunci seperti *"Invoice"*, *"Pembayaran"*, atau *"Tagihan"*.
+2. **AI Extraction:** Gemini AI menganalisis isi email mentah dan mengekstrak nominal, tanggal, kategori, serta status ke dalam format JSON terstruktur.
+3. **Spreadsheet Sync:** Memasukkan baris transaksi baru secara otomatis ke lembar *Income* atau *Expense* di Google Sheets.
+4. **Telegram Alert:** Mengirimkan notifikasi ringkasan konfirmasi transaksi dan laporan harian langsung ke aplikasi Telegram owner.
+
+---
+
+## 🛠️ Technology Stack
+
+| Tool | Peran & Alasan Pemilihan |
 | :--- | :--- |
-| **n8n** | Primary workflow orchestrator managing email polling, AI API calls, and logic flow. |
-| **GeminiAI Model** | Natural Language Processing (LLM) to extract structured financial data from raw email bodies. |
-| **Google Sheets** | Cloud database acting as an automated ledger for real-time reporting. |
-| **Telegram Bot** | Instant notification channel delivering instant cashflow transaction summaries to the owner's mobile device. |
+| **n8n** | Orchestrator utama workflow untuk pemicu email, eksekusi AI, serta integrasi API yang stabil. |
+| **Gemini AI Model** | Model LLM efisien dan hemat biaya untuk mengolah teks email acak menjadi data JSON presisi. |
+| **Google Sheets** | Database/ledger sederhana yang mudah diakses dan dikelola tanpa biaya tambahan. |
+| **Telegram Bot** | Kanal notifikasi instan untuk konfirmasi transaksi dan laporan kas harian. |
 
 ---
 
-## 🔄 Workflow Architecture & Reasoning
+## 🤖 AI Prompt Design
 
-```
-[ Gmail Trigger ] ➡️ [ GeminiAI Extraction ] ➡️️ [ Google Sheets Sync ] ➡️ [ Telegram Alert ]
-```
+Prompt yang dirancang untuk node Gemini AI difokuskan pada ekstraksi data ketat tanpa narasi tambahan (*zero conversational output*):
 
-1. **Gmail Trigger:** Polls incoming emails every 5 minutes with targeted filter keywords (`Invoice`, `Pembayaran`, `Transfer`, `Nota`).
-2. **AI Data Extraction:** The email body is sent to GeminiAI to extract essential transactional attributes into structured JSON.
-3. **Spreadsheet Sync:** Parsed transaction data is written as a new row into Google Sheets.
-4. **Telegram Alert:** Sends a real-time message confirmation to the owner's Telegram app.
+Kamu adalah asisten ekstraksi data keuangan untuk sistem akuntansi UMKM penjualan sepatu.
+Tugas utama kamu adalah menganalisis teks e-mail yang masuk, lalu mengekstraksi informasi penting terkait transaksi keuangan ke dalam format JSON tunggal secara presisi.
 
----
-
-## 🧠 AI Prompt Design
-
-The system relies on a strictly typed System Prompt to ensure predictable JSON parsing without markdown wrappers:
-
-```json
-// System Prompt
-Kamu adalah asisten keuangan UMKM.
-Tugas: Ekstrak data transaksi dari body email berikut ke JSON murni tanpa markdown formatting.
-
-{
-  "tanggal": "YYYY-MM-DD",
-  "tipe": "pemasukan | pengeluaran",
-  "nominal": 0,
-  "kategori": "string",
-  "keterangan": "string"
+### FORMAT JSON OUTPUT:
+{ 
+  "date": "YYYY-MM-DD", 
+  "type": "income | expense", 
+  "status": "paid | unpaid", 
+  "sender": "string", 
+  "description": "string", 
+  "invoice_number": "string", 
+  "amount": "number", 
+  "due_date": "YYYY-MM-DD", 
+  "email_id": "string"
 }
-```
 
-### Key Prompt Design Considerations:
-- **Strict JSON Constraint:** Prevents conversational conversational boilerplate from breaking n8n node parsing.
-- **Explicit Type Classification:** Segregates incoming money (*pemasukan*) from outgoing expenses (*pengeluaran*).
-- **Number Normalization:** Standardizes formatted currency strings (e.g., `"Rp 1.500.000"`) into pure integer values (`1500000`).
+### Strategi Desain Prompt:
 
----
-
-## 📸 Input & Output Visuals
-
-### 1. Trigger Input (Email Notification)
-Raw transaction emails received from suppliers or payment gateways:
-> **Subject:** Laporan Transaksi Masuk #INV-8821  
-> **Body:** Halo Owner UMKM, Pembayaran untuk pembelian **Bahan Baku Kopi 10kg** sebesar **Rp 1.500.000** telah berhasil diverifikasi pada tanggal **02 Oktober 2026**.
-
-### 2. Final Output (Google Sheets Ledger & Telegram Bot)
-**Google Sheets Entry:**
-| Tanggal | Tipe | Nominal | Kategori | Keterangan |
-| :--- | :--- | :--- | :--- | :--- |
-| `2026-10-02` | `Pengeluaran` | `Rp 1.500.000` | `Bahan Baku` | `Supplier Jaya` |
-
-**Telegram Bot Alert:**
-```text
-🟢 Transaksi Baru Dicatat!
-• Tipe: Pengeluaran
-• Nominal: Rp 1.500.000
-• Kategori: Bahan Baku
-• Tanggal: 02 Okt 2026
-```
+1. **Role Persona:** Memberikan identitas spesifik agar AI fokus pada tugas akuntansi UMKM.
+2. **Instruksi Spesifik:** Mencegah AI menambahkan komentar atau penjelasan teks di luar JSON.
+3. **Output JSON Ketat:** Memastikan output dapat dibaca secara langsung oleh node parser n8n tanpa *error*.
 
 ---
 
-## ⚙️ How to Deploy / Import
+## 📸 Output & Screenshot
 
-1. **Prerequisites:**
-   - Active **n8n** instance (Self-hosted or Cloud).
-   - **GeminiAI API Key**.
-   - **Google Sheets API** credentials enabled in Google Cloud Console.
-   - **Telegram Bot Token** created via `@BotFather`.
+### 1. Ledger Google Sheets (Database)
 
-2. **Import Workflow:**
-   - Copy the `cashflowmation.json` file from this repository.
-   - Open n8n, click **Import from File / URL**, and paste the JSON.
-   - Configure your credentials for Gmail, GeminiAI, Google Sheets, and Telegram.
-   - Activate the workflow!
+Data otomatis terpisah sesuai tipe transaksi (*Income* / *Expense*):
+
+![Income](component/image.png)
+
+* **Income Sheet:** Mencatat tanggal, status, customer/sumber, deskripsi, nomor invoice, amount, dan email_id.
+
+![Expense](component/image-1.png)
+
+* **Expense Sheet:** Mencatat pengeluaran, supplier, deskripsi, amount, status (*paid/unpaid/rejected*), dan tanggal jatuh tempo (*due_date*).
+
+### 2. Ringkasan Laporan Harian di Telegram
+
+Bot Telegram akan mengirimkan rekap kas harian secara otomatis:
+
+![telegram](component/image-2.png)
 
 ---
-*Created as part of the n8n Workflow Automation Project.*
+
+## ⚙️ Cara Menggunakan (Setup)
+
+1. **Import Workflow n8n:**
+* Clone repository ini.
+* Import file JSON workflow n8n ke instance n8n kamu.
+
+
+2. **Setup Credentials:**
+* Sambungkan credential **Gmail OAuth2**, **Google Sheets**, dan **Telegram Bot API**.
+* Masukkan **Google Gemini API Key** pada node AI LLM.
+
+
+3. **Konfigurasi Sheet:**
+* Buat Google Sheets dengan dua tab bernama `INCOME` dan `EXPENSE` sesuai dengan header kolom pada dokumentasi.
+
+
+4. **Aktifkan Workflow:**
+* Turn on workflow n8n (*Active*).
