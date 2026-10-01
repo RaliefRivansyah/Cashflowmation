@@ -1,0 +1,1384 @@
+{
+  "name": "Cashflowmation",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Kamu adalah asisten ekstraksi data keuangan untuk sistem akuntansi UMKM penjualan sepatu.\n\nTugas utama kamu adalah menganalisis teks e-mail yang masuk, lalu mengekstraksi informasi penting terkait transaksi keuangan ke dalam format JSON tunggal secara presisi.\n\n--- DATA EMAIL ---\nID Email: {{ $json.id }}\nSubject: {{ $json.Subject }}\nBody Email:\n{{ $json.text || $json.html || $json.snippet }}\n------------------\n\n### ATURAN EKSTRAKSI FIELD:\n1. \"date\": Tanggal diterbitkannya e-mail/invoice (Format: YYYY-MM-DD). Jika tidak ditemukan, gunakan tanggal e-mail masuk.\n2. \"type\": Tentukan tipe transaksi. Isikan SALAH SATU:\n   - \"income\"  : Jika transaksi merupakan penjualan produk/sepatu ke customer/reseller.\n   - \"expense\" : Jika transaksi merupakan pengeluaran/pembelian bahan baku, iklan, kurir, atau operasional dari supplier/vendor.\n3. \"status\": Tentukan status pembayaran. Isikan SALAH SATU:\n   - \"paid\"    : Jika transaksi/tagihan SUDAH DIBAYAR ATAU berupa bukti pembayaran (receipt/pembayaran lunas).\n   - \"unpaid\"  : Jika e-mail berisi tagihan/faktur yang BELUM DIBAYAR (masih ada jatuh tempo/pending payment).\n4. \"sender\": Nama pihak ketiga. Isikan nama Customer/Reseller (jika income) ATAU nama Vendor/Supplier/Platform (jika expense).\n5. \"description\": Ringkasan singkat mengenai transaksi (Contoh: \"Pembelian Bahan Baku Kulit\", \"Facebook Ads\", \"Invoice Sepatu Sneaker Size 42\").\n6. \"invoice_number\": Nomor invoice, faktur, atau kuitansi (Contoh: \"INV/2026/10/001\"). Jika tidak ditemukan, isikan null.\n7. \"amount\": Cari nominal angka total transaksi dari Body Email atau Subject. Cari angka di sekitar kata \"Total\", \"Harga\", \"Rp\", \"Nominal\", \"Pembayaran\", atau daftar produk. Wajib hapus semua simbol mata uang (Rp, $), titik, koma, dan spasi, lalu ubah ke angka murni bertipe NUMBER. Jika benar-benar tidak ditemukan nominal angka sama sekali, barulah isi 0.\n8. \"due_date\": Tanggal jatuh tempo pembayaran (Format: YYYY-MM-DD). Wajib diisi jika status = \"unpaid\". Jika status = \"paid\" atau tidak ada, isikan null.\n9. \"email_id\": ID unik e-mail dari sistem Gmail.\n\n### ATURAN FORMAT OUTPUT:\n- Balas HANYA dengan objek JSON murni yang valid.\n- JANGAN sertakan teks pengantar, penutup, atau markdown codeblock seperti ```json ... ```.\n\n### FORMAT JSON OUTPUT:\n{\n  \"date\": \"YYYY-MM-DD\",\n  \"type\": \"income | expense\",\n  \"status\": \"paid | unpaid\",\n  \"sender\": \"string\",\n  \"description\": \"string\",\n  \"invoice_number\": \"string\",\n  \"amount\": \"number\",\n  \"due_date\": \"YYYY-MM-DD\",\n  \"email_id\": \"string\"\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        512,
+        0
+      ],
+      "id": "1723a950-715c-4585-bbb2-f7e4fe33f405",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        176
+      ],
+      "id": "b17186f4-4102-4d8c-8bbd-6c99404ffd8d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rACY09Ra6uWAT18p",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "835721516",
+        "message": "=🔔 APPROVAL TAGIHAN BARU\n\nDetail Tagihan:\n• No. Invoice: {{ $json.invoice_number }}\n• Vendor/Klien: {{ $json.supplier }}\n• Nominal: Rp {{ $json.amount}}\n• Tgl Jatuh Tempo: {{ $json.due_date }}\n• Keterangan: {{ $json.description }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "disapproveLabel": "❌ Rejected"
+          }
+        },
+        "chatApproval": true,
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1856,
+        192
+      ],
+      "id": "575b7a8c-41e1-4d94-a514-40be1d4d4177",
+      "name": "owner_approval_to_pay",
+      "webhookId": "6f1f3bf7-59f3-45de-adaa-d248704a5bfb",
+      "credentials": {
+        "telegramApi": {
+          "id": "clFbH8azbFWp4Fn7",
+          "name": "PPKDAI_BOT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        512,
+        176
+      ],
+      "id": "de021481-be76-4e7a-9ccd-521983b1c656",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "jCfRq1BVTyCHvOSQ",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY",
+          "mode": "list",
+          "cachedResultName": "transaction",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1629732821,
+          "mode": "list",
+          "cachedResultName": "EXPENSE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit#gid=1629732821"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice_number": "={{ $('append_to_expense_but_unpaid').item.json.invoice_number }}",
+            "date": "={{ $('append_to_expense_but_unpaid').item.json.date }}",
+            "status": "=paid",
+            "supplier": "={{ $('append_to_expense_but_unpaid').item.json.supplier }}",
+            "description": "={{ $('append_to_expense_but_unpaid').item.json.description }}",
+            "amount": "={{ $('append_to_expense_but_unpaid').item.json.amount }}",
+            "email_id": "={{ $('append_to_expense_but_unpaid').item.json.email_id }}"
+          },
+          "matchingColumns": [
+            "invoice_number"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier",
+              "displayName": "supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email_id",
+              "displayName": "email_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2304,
+        80
+      ],
+      "id": "2dec9e3c-8cbc-42a6-811d-9f494945ce66",
+      "name": "update_approval_expense",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WgFEueRWZeAybEJb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY",
+          "mode": "list",
+          "cachedResultName": "transaction",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1629732821,
+          "mode": "list",
+          "cachedResultName": "EXPENSE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit#gid=1629732821"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "invoice_number": "={{ $('append_to_expense_but_unpaid').item.json.invoice_number }}",
+            "date": "={{ $('append_to_expense_but_unpaid').item.json.date }}",
+            "status": "=rejected",
+            "supplier": "={{ $('append_to_expense_but_unpaid').item.json.supplier }}",
+            "description": "={{ $('append_to_expense_but_unpaid').item.json.description }}",
+            "amount": "={{ $('append_to_expense_but_unpaid').item.json.amount }}",
+            "email_id": "={{ $('append_to_expense_but_unpaid').item.json.email_id }}"
+          },
+          "matchingColumns": [
+            "invoice_number"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier",
+              "displayName": "supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email_id",
+              "displayName": "email_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2304,
+        288
+      ],
+      "id": "75a334db-3276-4dcd-84fe-c84e5febcd32",
+      "name": "update_rejected_expense",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WgFEueRWZeAybEJb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1ea7e971-1f5f-4dd4-8277-86d4093a120e",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2080,
+        192
+      ],
+      "id": "22a6116e-3e10-4fba-bd29-98bd1f04b4f8",
+      "name": "IF_approved"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "34f699c6-6d9c-4796-a8b9-722bd7e5da6f",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "paid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1408,
+        96
+      ],
+      "id": "8eeead62-9853-497f-b3ba-497e59abb7a2",
+      "name": "IF_paid"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0eacdca-f472-4864-8342-f4fbabfb270d",
+              "name": "date",
+              "value": "={{ JSON.parse($json.text).date }}",
+              "type": "string"
+            },
+            {
+              "id": "565aa9d7-b035-47e1-9d96-c610902b8f76",
+              "name": "type",
+              "value": "={{ JSON.parse($json.text).type }}",
+              "type": "string"
+            },
+            {
+              "id": "ab8d5591-12b2-47a5-a50a-504ea9446e43",
+              "name": "status",
+              "value": "={{ JSON.parse($json.text).status }}",
+              "type": "string"
+            },
+            {
+              "id": "647368c0-7715-45d5-9226-7be11931a4cd",
+              "name": "customer/supplier",
+              "value": "={{ JSON.parse($json.text).sender }}",
+              "type": "string"
+            },
+            {
+              "id": "5138b71e-eb4c-4fe7-8f71-72a41a745020",
+              "name": "description",
+              "value": "={{ JSON.parse($json.text).description }}",
+              "type": "string"
+            },
+            {
+              "id": "438a81e2-e7c1-410e-b0cf-f5f536df631c",
+              "name": "invoice_number",
+              "value": "={{ JSON.parse($json.text).invoice_number }}",
+              "type": "string"
+            },
+            {
+              "id": "9bb96a74-23e3-4b9b-8def-7a5f036fdce0",
+              "name": "amount",
+              "value": "={{ JSON.parse($json.text).amount }}",
+              "type": "string"
+            },
+            {
+              "id": "379cb4c2-1364-4b83-b44c-602e6e04fb15",
+              "name": "due_date",
+              "value": "={{ JSON.parse($json.text).due_date }}",
+              "type": "string"
+            },
+            {
+              "id": "63eb767f-42f4-43f3-840c-5eca88ab9cc8",
+              "name": "email_id",
+              "value": "={{ JSON.parse($json.text).email_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        944,
+        0
+      ],
+      "id": "c23b4185-3421-401f-920c-ef2cf08e4026",
+      "name": "parsing"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "income",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "36616f57-456f-4649-8119-666285d58106"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "INCOME"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "82731468-1784-4cbf-850d-34a4208dc655",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "expense",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EXPENSE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "513b5b83-22c4-4ad2-bed9-028bf40a637b",
+      "name": "switch"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY",
+          "mode": "list",
+          "cachedResultName": "transaction",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1629732821,
+          "mode": "list",
+          "cachedResultName": "EXPENSE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit#gid=1629732821"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "status": "={{ $json.status }}",
+            "supplier": "={{ $json['customer/supplier'] }}",
+            "description": "={{ $json.description }}",
+            "invoice_number": "={{ $json.invoice_number }}",
+            "amount": "={{ $json.amount }}",
+            "due_date": "={{ $json.due_date }}",
+            "email_id": "={{ $json.email_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier",
+              "displayName": "supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_id",
+              "displayName": "email_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1632,
+        0
+      ],
+      "id": "81e609ad-d063-4491-bbd6-51c0f3a171bd",
+      "name": "append_to_exoense",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WgFEueRWZeAybEJb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY",
+          "mode": "list",
+          "cachedResultName": "transaction",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "INCOME",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "status": "={{ $json.status }}",
+            "customer": "={{ $json['customer/supplier'] }}",
+            "description": "={{ $json.description }}",
+            "invoice_number": "={{ $json.invoice_number }}",
+            "amount": "={{ $json.amount }}",
+            "email_id": "={{ $json.email_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer",
+              "displayName": "customer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_id",
+              "displayName": "email_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1408,
+        -96
+      ],
+      "id": "1315f4d1-065c-46f9-a172-5c912562dc10",
+      "name": "append_to_income",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WgFEueRWZeAybEJb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY",
+          "mode": "list",
+          "cachedResultName": "transaction",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1629732821,
+          "mode": "list",
+          "cachedResultName": "EXPENSE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit#gid=1629732821"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "status": "={{ $json.status }}",
+            "supplier": "={{ $json['customer/supplier'] }}",
+            "description": "={{ $json.description }}",
+            "invoice_number": "={{ $json.invoice_number }}",
+            "amount": "={{ $json.amount }}",
+            "due_date": "={{ $json.due_date }}",
+            "email_id": "={{ $json.email_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier",
+              "displayName": "supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_id",
+              "displayName": "email_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1632,
+        192
+      ],
+      "id": "d268f011-eed1-470b-b58a-b06f748b3223",
+      "name": "append_to_expense_but_unpaid",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WgFEueRWZeAybEJb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        48,
+        0
+      ],
+      "id": "3fbac49d-9aa2-411f-9a23-f2ac05a2c20b",
+      "name": "email_trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        80,
+        480
+      ],
+      "id": "7f1fd7b4-b6ad-452e-8226-80a8c18f334e",
+      "name": "daily_trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 3,
+        "simple": false,
+        "filters": {
+          "q": "subject:(invoice OR faktur OR pembayaran OR \"receipt\" OR tagihan)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "2c5b3735-810a-42d2-bb16-e351175e8d9d",
+      "name": "Get many messages",
+      "webhookId": "94c64911-fbcb-4e0c-96bf-9c360098a850",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "J505uEjYMDYY3v7X",
+          "name": "ralief.rivansyah@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY",
+          "mode": "list",
+          "cachedResultName": "transaction",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1629732821,
+          "mode": "list",
+          "cachedResultName": "EXPENSE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit#gid=1629732821"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "paid"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        304,
+        592
+      ],
+      "id": "20d644e7-45b6-4c4d-94cf-96677cf61489",
+      "name": "get_expense_data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WgFEueRWZeAybEJb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY",
+          "mode": "list",
+          "cachedResultName": "transaction",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "INCOME",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14SzaNj938cv3MxZ67sTlBKtJgMyQcwF4uCjQL7ltAuY/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        304,
+        384
+      ],
+      "id": "5e5c27b0-3581-4014-a040-83688d14e298",
+      "name": "get_income_data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "WgFEueRWZeAybEJb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "835721516",
+        "text": "=📊 LAPORAN KEUANGAN HARIAN\nTanggal: {{ $now.format('dd-MM-yyyy') }}\n\n🟢 Total Pendapatan: Rp {{ $json.income_amount }}\n🔴 Total Pengeluaran: Rp {{ $json.exoense_amount }}\n\n━━━━━━━━━━━━━━━━━━━━\nLaba / Rugi Bersih: Rp {{ $json.income_amount - $json.exoense_amount }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        928,
+        480
+      ],
+      "id": "8489c192-befd-46d6-b537-ca10efa690e4",
+      "name": "Send a text message",
+      "webhookId": "bbd12b4c-b0e5-45db-bab9-8163b9bda3f8",
+      "executeOnce": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "clFbH8azbFWp4Fn7",
+          "name": "PPKDAI_BOT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f62085e2-b7a9-42a0-83cb-9bbf75b0d1f2",
+              "name": "income_amount",
+              "value": "={{ $(\"get_income_data\").all().reduce((sum, item) => sum + (Number(item.json.amount) || 0), 0) }}",
+              "type": "string"
+            },
+            {
+              "id": "13c31bce-1020-4d70-80cf-c90f7a88eacc",
+              "name": "=exoense_amount",
+              "value": "={{ $(\"get_expense_data\").all().reduce((sum, item) => sum + (Number(item.json.amount) || 0), 0) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        720,
+        480
+      ],
+      "id": "c7fa1d5b-aaf0-4605-9c88-754d632f4d51",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## daily_report\n",
+        "height": 384,
+        "width": 1120,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        16,
+        368
+      ],
+      "typeVersion": 1,
+      "id": "c98fee10-55cd-4c03-891c-4defa892e663",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        528,
+        480
+      ],
+      "id": "4680b59d-caff-4812-8734-c0c7e31f8afe",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "content": "## Background Masalah\n## =================\nBanyak owner UMKM skala kecil yang harus mengelola seluruh operasional bisnis seorang diri tanpa bantuan admin keuangan. \n\n\n## Mengapa di automatisasi\n## ==================\n- Efisiensi waktu\n- Data terorganisasi\n- Realtime & akurat\n\n",
+        "height": 384,
+        "width": 320,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1216,
+        368
+      ],
+      "typeVersion": 1,
+      "id": "0e0b5b73-1137-4839-8a43-1beda9251fcb",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "parsing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "owner_approval_to_pay": {
+      "main": [
+        [
+          {
+            "node": "IF_approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "IF_approved": {
+      "main": [
+        [
+          {
+            "node": "update_approval_expense",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "update_rejected_expense",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_paid": {
+      "main": [
+        [
+          {
+            "node": "append_to_exoense",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "append_to_expense_but_unpaid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsing": {
+      "main": [
+        [
+          {
+            "node": "switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch": {
+      "main": [
+        [
+          {
+            "node": "append_to_income",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF_paid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "append_to_expense_but_unpaid": {
+      "main": [
+        [
+          {
+            "node": "owner_approval_to_pay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "email_trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "daily_trigger": {
+      "main": [
+        [
+          {
+            "node": "get_income_data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get_expense_data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_expense_data": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "get_income_data": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a45ca45d-9ea9-42b3-9795-21376e35159f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fc1622a6b06819937908eb580c7dbedb9b63fe9abb77a37ed59f587ffdb3f25b"
+  },
+  "nodeGroups": [],
+  "id": "HSHx17e77Pw0QsAg",
+  "tags": []
+}
