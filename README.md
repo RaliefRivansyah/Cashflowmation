@@ -1,8 +1,9 @@
-# Cashflowmation: Tracking Keuangan UMKM Otomatis
+# Cashflowmation
+## Tracking Keuangan UMKM Otomatis
 
 Sistem pemantau pendapatan dan pengeluaran otomatis berbasis email transaksi untuk efisiensi operasional *solo owner* UMKM.
 
-**Author:** Ralief Langga Rivansyah  
+**N8N Workflow** https://raliefr.app.n8n.cloud/workflow/HSHx17e77Pw0QsAg 
 **Engine:** n8n + AI LLM (Gemini)  
 
 ![cashflowmation](Component/Cashflowmation_screenshot.png)
