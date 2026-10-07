@@ -14,7 +14,7 @@ Cashflowmation adalah workflow n8n untuk mengekstrak transaksi pendapatan dan pe
 
 ## Prasyarat
 
-- Instance n8n yang dapat mengimpor dan menjalankan workflow JSON. Versi n8n yang kompatibel tidak ditentukan di repositori: `[ISI_DI_SINI]`.
+- Instance n8n yang dapat mengimpor dan menjalankan workflow JSON.
 - Akun Gmail dengan akses OAuth2.
 - Akun Google dan spreadsheet dengan sheet `INCOME` serta `EXPENSE`.
 - Akun Telegram dan bot Telegram.
